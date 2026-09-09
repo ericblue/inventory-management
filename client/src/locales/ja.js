@@ -6,6 +6,7 @@ export default {
     orders: '注文',
     finance: '財務',
     demandForecast: '需要予測',
+    restocking: '補充',
     companyName: '触媒コンポーネンツ',
     subtitle: '在庫管理システム'
   },
@@ -106,6 +107,14 @@ export default {
     title: '注文',
     description: '顧客注文の表示と管理',
     allOrders: 'すべての注文',
+    submittedOrders: '送信済み注文',
+    submittedDescription: '補充タブから発注された注文',
+    noSubmittedOrders: '送信済みの補充注文はまだありません。',
+    leadTime: 'リードタイム',
+    leadTimeDays: '{days}日',
+    placedOn: '発注日',
+    warehousesLabel: '倉庫',
+    lines: '{count}行',
     totalOrders: '総注文数',
     totalRevenue: '総収益',
     avgOrderValue: '平均注文額',
@@ -168,6 +177,44 @@ export default {
   },
 
   // Demand Forecast
+  restocking: {
+    title: '補充',
+    description: '予算を設定し、需要予測に基づいて推奨在庫を発注します',
+    budget: '利用可能な予算',
+    budgetHelp: 'ドラッグして今回の支出可能額を設定します',
+    allocated: '割当済み',
+    remaining: '残額',
+    itemsRecommended: '推奨アイテム数',
+    totalIfAll: '全て補充した場合の費用',
+    recommendations: '推奨アイテム',
+    noRecommendations: 'この予算に収まるアイテムがありません。予算を増やしてください。',
+    nothingToRestock: '予測対象のアイテムは十分な在庫があります。補充は不要です。',
+    withinBudget: '発注対象',
+    overBudget: '予算超過',
+    placeOrder: '発注する',
+    placing: '送信中...',
+    orderPlaced: '注文 {orderNumber} を送信しました。納品予定日 {date}（{days}日）。',
+    orderFailed: '注文を送信できませんでした。もう一度お試しください。',
+    selectedCount: '{total}件中{count}件を選択',
+    belowReorderPoint: '発注点を下回っています',
+    table: {
+      item: 'アイテム',
+      sku: 'SKU',
+      category: 'カテゴリー',
+      warehouse: '倉庫',
+      onHand: '在庫数',
+      reorderPoint: '発注点',
+      demand: '現在需要',
+      forecast: '予測需要',
+      trend: '傾向',
+      quantity: '発注数量',
+      unitCost: '単価',
+      lineTotal: '小計',
+      leadTime: 'リードタイム',
+      priority: '優先度',
+      include: '含める'
+    }
+  },
   demand: {
     title: '需要予測',
     description: '需要動向の分析と将来のニーズの予測',
@@ -200,6 +247,7 @@ export default {
 
   // Statuses
   status: {
+    submitted: '送信済み',
     delivered: '配達済み',
     shipped: '出荷済み',
     processing: '処理中',
@@ -328,6 +376,13 @@ export default {
 
   // Product Names
   productNames: {
+    'Industrial Widget Type A': '工業用ウィジェット タイプA',
+    'Steel Bearing Assembly': 'スチールベアリング組立',
+    'High-Temperature Gasket': '高温用ガスケット',
+    'Electric Motor 5HP': '電動モーター 5HP',
+    'Oil Filter Cartridge': 'オイルフィルターカートリッジ',
+    'Pressure Relief Valve': '圧力逃がし弁',
+    'Logic Controller Board': 'ロジックコントローラーボード',
     'Single Layer PCB Assembly': '単層PCB組立',
     'Dual Layer PCB Assembly': '二層PCB組立',
     'Multi Layer PCB Assembly': '多層PCB組立',
