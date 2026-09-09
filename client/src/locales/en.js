@@ -6,6 +6,7 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -106,6 +107,14 @@ export default {
     title: 'Orders',
     description: 'View and manage customer orders',
     allOrders: 'All Orders',
+    submittedOrders: 'Submitted Orders',
+    submittedDescription: 'Restock orders placed from the Restocking tab',
+    noSubmittedOrders: 'No restock orders submitted yet.',
+    leadTime: 'Lead Time',
+    leadTimeDays: '{days} days',
+    placedOn: 'Placed',
+    warehousesLabel: 'Warehouses',
+    lines: '{count} lines',
     totalOrders: 'Total Orders',
     totalRevenue: 'Total Revenue',
     avgOrderValue: 'Avg Order Value',
@@ -168,6 +177,44 @@ export default {
   },
 
   // Demand Forecast
+  restocking: {
+    title: 'Restocking',
+    description: 'Set a budget and order recommended stock based on demand forecasts',
+    budget: 'Available Budget',
+    budgetHelp: 'Drag to set how much you can spend this cycle',
+    allocated: 'Allocated',
+    remaining: 'Remaining',
+    itemsRecommended: 'Items Recommended',
+    totalIfAll: 'Cost to restock everything',
+    recommendations: 'Recommended Items',
+    noRecommendations: 'No items fit within this budget. Increase the budget to see recommendations.',
+    nothingToRestock: 'All forecast items are sufficiently stocked. Nothing to restock.',
+    withinBudget: 'In order',
+    overBudget: 'Over budget',
+    placeOrder: 'Place Order',
+    placing: 'Submitting...',
+    orderPlaced: 'Order {orderNumber} submitted. Expected delivery {date} ({days} days).',
+    orderFailed: 'Could not submit the order. Please try again.',
+    selectedCount: '{count} of {total} items selected',
+    belowReorderPoint: 'Below reorder point',
+    table: {
+      item: 'Item',
+      sku: 'SKU',
+      category: 'Category',
+      warehouse: 'Warehouse',
+      onHand: 'On Hand',
+      reorderPoint: 'Reorder Point',
+      demand: 'Demand',
+      forecast: 'Forecast',
+      trend: 'Trend',
+      quantity: 'Order Qty',
+      unitCost: 'Unit Cost',
+      lineTotal: 'Line Total',
+      leadTime: 'Lead Time',
+      priority: 'Priority',
+      include: 'Include'
+    }
+  },
   demand: {
     title: 'Demand Forecast',
     description: 'Analyze demand trends and forecasts',
@@ -200,6 +247,7 @@ export default {
 
   // Statuses
   status: {
+    submitted: 'Submitted',
     delivered: 'Delivered',
     shipped: 'Shipped',
     processing: 'Processing',
