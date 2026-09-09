@@ -186,8 +186,9 @@
   <h1>Factory Inventory Management System</h1>
   <p class="lede">
     A two-process demo application: a Vue 3 single-page app talking to a Python FastAPI
-    service over plain HTTP JSON. There is no database — all data is loaded from JSON
-    files into Python lists at import time and filtered in memory.
+    service over plain HTTP JSON. There is no database — seed data is loaded from JSON
+    files into Python lists at import time and filtered in memory. One endpoint writes:
+    submitted restock orders accumulate in a module-level list for the life of the process.
   </p>
   <div class="facts">
     <div>
@@ -204,7 +205,7 @@
     </div>
     <div>
       <div class="fact-label">Backend tests</div>
-      <div class="fact-value">40 passing</div>
+      <div class="fact-value">97 passing, 4 xfailed</div>
     </div>
   </div>
 </header>
@@ -228,7 +229,7 @@
         <div class="node-path">App.vue — nav, FilterBar, modals</div>
       </div>
       <div class="node">
-        <div class="node-name">Router views (6)</div>
+        <div class="node-name">Router views (7)</div>
         <div class="node-path">views/*.vue</div>
       </div>
       <div class="node">
@@ -255,7 +256,7 @@
     <div class="layer-body">
       <div class="node">
         <div class="node-name">API client</div>
-        <div class="node-path">client/src/api.js — 17 methods</div>
+        <div class="node-path">client/src/api.js — 20 methods</div>
       </div>
       <div class="node">
         <div class="node-name">Base URL (hardcoded)</div>
@@ -276,20 +277,20 @@
     </div>
     <div class="layer-body">
       <div class="node">
-        <div class="node-name">14 route handlers</div>
-        <div class="node-path">all GET, no write endpoints</div>
+        <div class="node-name">17 route handlers</div>
+        <div class="node-path">16 GET, 1 POST (restock orders)</div>
       </div>
       <div class="node is-accent">
         <div class="node-name">Shared filter helpers</div>
         <div class="node-path">apply_filters() · filter_by_month()</div>
       </div>
       <div class="node">
-        <div class="node-name">Pydantic models (6)</div>
+        <div class="node-name">Pydantic models (12)</div>
         <div class="node-path">InventoryItem, Order, DemandForecast, …</div>
       </div>
       <div class="node">
         <div class="node-name">Derived analytics</div>
-        <div class="node-path">/dashboard/summary · /reports/*</div>
+        <div class="node-path">/dashboard/summary · /reports/* · /restock/*</div>
       </div>
     </div>
   </div>
@@ -311,7 +312,7 @@
       </div>
       <div class="node">
         <div class="node-name">inventory.json</div>
-        <div class="node-path">32 records</div>
+        <div class="node-path">40 records</div>
       </div>
       <div class="node">
         <div class="node-name">transactions.json</div>
@@ -333,13 +334,19 @@
         <div class="node-name">purchase_orders.json</div>
         <div class="node-path">empty list</div>
       </div>
+      <div class="node is-accent">
+        <div class="node-name">submitted_orders</div>
+        <div class="node-path">in-memory only — no file</div>
+      </div>
     </div>
   </div>
 
   <p class="note" style="margin-top:1.25rem">
-    Because the JSON files are read at import time into module-level Python lists, the data is
-    read-only for the life of the process. Editing a JSON file requires a server restart, and
-    nothing a user does in the UI can persist.
+    Because the JSON files are read at import time into module-level Python lists, the seed data
+    is read-only for the life of the process. Editing a JSON file requires a server restart.
+    The one exception is <code>submitted_orders</code>, which restock submissions append to at
+    runtime — never written back to disk, so it survives page reloads and is shared across
+    browser tabs, but resets when the server restarts.
   </p>
 </section>
 
@@ -409,17 +416,61 @@
     </li>
   </ol>
 
-  <h3>Two deliberate exceptions</h3>
+  <h3>Three deliberate exceptions</h3>
   <ul class="plain">
     <li><strong>Inventory has no time dimension.</strong> <code>/api/inventory</code> accepts only <code>warehouse</code> and <code>category</code>; the Time Period filter is silently ignored, because inventory records carry no <code>order_date</code>.</li>
     <li><strong>Some views bypass the filter bar entirely.</strong> <code>/api/demand</code>, <code>/api/backlog</code>, <code>/api/spending/*</code> and <code>/api/reports/*</code> take no filter params. Where filtering is still wanted, the frontend does it client-side — the Dashboard, for example, fetches all backlog items and then narrows them to SKUs present in the already-filtered inventory response.</li>
+    <li><strong>Restocking ignores the filter bar entirely.</strong> The Restocking view does not consume <code>useFilters</code> at all: recommendations are driven by the budget slider and are warehouse-agnostic, and submitted restock orders have no customer, status or month dimension to filter on. The Orders tab's Submitted Orders section is likewise excluded from the filter watch that drives the customer-orders table beside it.</li>
   </ul>
+
+  <h3>The restocking pipeline</h3>
+  <p>
+    Restocking runs on a different path from the filter-driven views, so it is worth reading separately.
+  </p>
+  <ol class="flow">
+    <li>
+      <div class="step-title">The slider sets a budget</div>
+      <div class="step-body">Its maximum is the cost of buying every candidate, learned from a probe
+      request at <code>budget=0</code>. Refetches are debounced and the previous results stay rendered
+      while one is in flight, so dragging does not flicker.</div>
+    </li>
+    <li>
+      <div class="step-title">The backend joins forecasts to inventory</div>
+      <div class="step-body">A forecast SKU with no inventory record has no unit cost and is skipped
+      rather than guessed at.</div>
+    </li>
+    <li>
+      <div class="step-title">Quantity is an order-up-to target</div>
+      <div class="step-body"><code>forecasted_demand + reorder_point &minus; quantity_on_hand</code>.
+      Sizing on the raw demand gap instead yields one- and two-unit orders for the stable-trend items,
+      which is not a meaningful purchase.</div>
+    </li>
+    <li>
+      <div class="step-title">Ranking is separate from sizing</div>
+      <div class="step-body">Items score on demand pressure (<code>forecasted &minus; current</code>),
+      boosted 50% when stock has already fallen to or below the reorder point, so urgent items outrank
+      large-but-calm top-ups.</div>
+    </li>
+    <li>
+      <div class="step-title">The budget fill is greedy but does not stop early</div>
+      <div class="step-body">A line that overruns the remaining budget is skipped and cheaper lines
+      further down the ranking are still considered, so one expensive item cannot strand the rest of the
+      budget. Every candidate is returned flagged <code>within_budget</code>, so the UI can show what was
+      left out.</div>
+    </li>
+    <li>
+      <div class="step-title">Submission re-prices server-side</div>
+      <div class="step-body">The client sends only SKUs and quantities; unit prices, names and warehouses
+      are resolved from inventory, so a stale basket cannot set its own totals. Lead time comes from a
+      per-category map and the order takes its slowest line.</div>
+    </li>
+  </ol>
 </section>
 
 <!-- ============ API SURFACE ============ -->
 <section>
   <h2>API Surface</h2>
-  <p>Every implemented endpoint is a <code>GET</code>. Verified live against the running server.</p>
+  <p>Sixteen <code>GET</code> endpoints and one <code>POST</code>. Verified live against the running server.</p>
   <div class="table-scroll">
     <table>
       <thead>
@@ -439,6 +490,9 @@
         <tr><td class="mono">/api/spending/transactions</td><td>none</td><td>transactions.json</td><td>Spending</td></tr>
         <tr><td class="mono">/api/reports/quarterly</td><td>none</td><td>orders.json<span class="sub">aggregated at request time</span></td><td>Reports <span class="sub">(direct axios, bypasses api.js)</span></td></tr>
         <tr><td class="mono">/api/reports/monthly-trends</td><td>none</td><td>orders.json<span class="sub">aggregated at request time</span></td><td>Reports <span class="sub">(direct axios, bypasses api.js)</span></td></tr>
+        <tr><td class="mono">/api/restock/recommendations</td><td>budget<span class="sub">required, &ge; 0</span></td><td>demand_forecasts + inventory<span class="sub">order-up-to sizing, greedy budget fill</span></td><td>Restocking</td></tr>
+        <tr><td class="mono">/api/restock-orders</td><td>none</td><td>submitted_orders<span class="sub">in-memory</span></td><td>Orders <span class="sub">(Submitted Orders section)</span></td></tr>
+        <tr><td class="mono">/api/restock-orders <span class="sub">POST</span></td><td>—</td><td>inventory &rarr; submitted_orders<span class="sub">prices resolved server-side</span></td><td>Restocking</td></tr>
         <tr><td class="mono">/</td><td>—</td><td>—</td><td>Health / version banner</td></tr>
       </tbody>
     </table>
@@ -456,10 +510,11 @@
       <tbody>
         <tr><td class="mono">/</td><td>Dashboard.vue <span class="sub">1,271 lines — the largest file</span></td><td>KPI tiles, revenue vs. goal, status donut, backlog table</td></tr>
         <tr><td class="mono">/inventory</td><td>Inventory.vue</td><td>Stock levels vs. reorder points</td></tr>
-        <tr><td class="mono">/orders</td><td>Orders.vue</td><td>Order list with status tracking</td></tr>
+        <tr><td class="mono">/orders</td><td>Orders.vue <span class="sub">582 lines</span></td><td>Order list with status tracking, plus submitted restock orders</td></tr>
         <tr><td class="mono">/spending</td><td>Spending.vue <span class="sub">852 lines</span></td><td>Cost analytics, category breakdown, transactions</td></tr>
         <tr><td class="mono">/demand</td><td>Demand.vue</td><td>Forecast vs. current demand, trend labels</td></tr>
         <tr><td class="mono">/reports</td><td>Reports.vue</td><td>Quarterly performance and month-over-month trends</td></tr>
+        <tr><td class="mono">/restocking</td><td>Restocking.vue <span class="sub">672 lines</span></td><td>Budget slider, recommended items, order submission</td></tr>
       </tbody>
     </table>
   </div>
@@ -489,9 +544,13 @@
 
   <div class="callout">
     <strong>These are tracked in <a href="KNOWN-ISSUES.md">docs/KNOWN-ISSUES.md</a></strong>
-    as <code>BUG-001</code>&ndash;<code>BUG-004</code> and <code>OBS-001</code>&ndash;<code>OBS-003</code>,
+    as <code>BUG-001</code>&ndash;<code>BUG-008</code> and <code>OBS-001</code>&ndash;<code>OBS-003</code>,
     with file/line references, reproduce steps, and the open decisions for each. Titles below match
     the tracker entries. Add new findings there, not here.
+    <br><br>
+    <strong>BUG-005 is fixed</strong> — the 8 orphaned demand-forecast SKUs now have inventory
+    records. <code>tests/backend/test_data_integrity.py</code> guards that class of break and
+    surfaced three more (BUG-006 to BUG-008), pinned there as strict xfails.
   </div>
 
   <div class="finding sev-broken">
@@ -625,9 +684,9 @@
 </section>
 
 <footer>
-  Generated from a read of the <code>new_features</code> branch at commit <code>27b0724</code>.
-  Endpoint status codes and the test count were verified against a running instance;
-  everything else was traced from source.
+  Generated from a read of the <code>new_features</code> branch, updated at commit
+  <code>78a80b1</code> to cover the Restocking feature. Endpoint status codes, counts and the
+  test results were verified against a running instance; everything else was traced from source.
   Open defects are tracked in <a href="KNOWN-ISSUES.md">KNOWN-ISSUES.md</a>.
 </footer>
 
